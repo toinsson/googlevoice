@@ -149,7 +149,7 @@ def main(wavFileName):
         logger.info("%s", TESTINDEX)
         logger.info("%s --> %s", h1, h2)
         logger.info("%s", res)
-        logger.info("\n")
+        logger.info("")
 
         #logger.debug("this should not appear in the srt file")
 
