@@ -95,3 +95,25 @@ def smooth(x, window_len=11, window='hanning'):
 
     y = np.convolve(w/w.sum(), s, mode='valid')
     return y
+
+
+import matplotlib.pyplot as plt
+
+def plt_findings(npFrames, framerate, voiceFreqSmooth, cutPointsNSecInSec):
+    ########################################################################################################################
+    ## print the findings ..
+    time = np.linspace(0, len(npFrames) / framerate, num=len(npFrames))
+    plt.plot(time, npFrames)
+
+    time1 = np.linspace(0, len(voiceFreqSmooth) / (framerate / 32), num=len(voiceFreqSmooth))
+    plt.plot(time1, voiceFreqSmooth, linewidth=3.0)
+
+    ## plot the cut points
+    plt.plot(cutPointsNSecInSec, voiceFreqSmooth[cutPointsNSecInSec], 'ro', lw=10.0)
+
+    #plt.axis([0, 66, 0, 1e6])
+    plt.show()
+
+
+
+
