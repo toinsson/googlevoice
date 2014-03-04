@@ -10,6 +10,7 @@ import wave
 from os import path
 import sys
 import logging
+import datetime
 
 ## downloaded import
 from pygsr import Pygsr
@@ -18,27 +19,28 @@ import lib  # local lib of helper functions
 
 
 ########################################################################################################################
-## logging
-#TODO: better logging location and replace print with logging function call
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
-# create a file handler
-handler = logging.FileHandler('hello.log')
-handler.setLevel(logging.INFO)
-# create a logging format
-formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-handler.setFormatter(formatter)
-# add the handlers to the logger
-logger.addHandler(handler)
-
-
-########################################################################################################################
-wavFileName = "/Users/toine/Documents/speech_recognition/sound/iphone/audio16k.wav"
+wavFileName = "/Users/toine/Documents/speech_recognition/sound/sample/test.wav"
 wavFile = wave.open(wavFileName)
 (nchannels, sampwidth, framerate, nframes, comptype, compname) = wavFile.getparams()
 
 frames = wavFile.readframes(-1)
 npFrames = np.fromstring(frames, "Int16")
+
+########################################################################################################################
+## logging
+#TODO: better logging location and replace print with logging function call
+logging.basicConfig(level=logging.DEBUG)
+logger = logging.getLogger(__name__)
+
+# create a file handler for the current file
+srtHandler = logging.FileHandler(wavFileName + ".srt")
+srtHandler.setLevel(logging.INFO)
+# create a logging format maybe not needed
+#formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+#handler.setFormatter(formatter)
+# add the handlers to the logger
+logger.addHandler(srtHandler)
+
 
 ########################################################################################################################
 ## compute the spectrogram
@@ -99,7 +101,7 @@ cutPoints = np.where(minimums & (voiceFreqSmooth < overflowValue))[0]
 ## filter the minimums by roughly selecting one every 5 seconds
 # on npFrames, 5 sec = framerate * 5
 # on voiceFreq, framerate -> framerate/32
-avgSec = 7
+avgSec = 3
 cutPointsNSec = [0]
 
 for pt in cutPoints:
@@ -120,15 +122,17 @@ for item1, item2 in lib.pairwise(cutPointsNSec, fillvalue=0):
 
 # geenrate the extension to the filename, e.g. filename.X_Y.wav for a cut from seconds X to Y
 addExtension = []
+timestampInSec = []
 for item1, item2 in lib.pairwise(cutPointsNSecInSec, fillvalue="end"):
     tmp = str(item1) + "_" + str(item2)
+    timestampInSec.append((item1, item2))
     addExtension.append(tmp)
 
-print timestamp, timestampNFrames, addExtension
-print len(timestamp), len(timestampNFrames), len(addExtension)
+logger.debug("%s %s %s", timestamp, timestampNFrames, addExtension)
+logger.debug("%s %s %s", len(timestamp), len(timestampNFrames), len(addExtension))
 ## test on 1 file first
 #for (cutExt, cutTime, cutFrame) in zip(timestamp, timestampNFrames, addExtension):
-res = []
+totalRes = []
 
 TESTINDEX = 6
 #TODO: take care of the last index, when cutPointNSecInSec is "end"
@@ -145,10 +149,19 @@ for TESTINDEX in range(len(timestamp)-1):
 
     pygsr = Pygsr(filename)
     pygsr.convert()
-    res.append(pygsr.speech_to_text("en"))
-    print TESTINDEX, addExtension[TESTINDEX], timestamp[TESTINDEX]
+    res = pygsr.speech_to_text("en", indx=TESTINDEX)
+    totalRes.append(res)
+    logger.debug("%s %s %s", TESTINDEX, addExtension[TESTINDEX], timestamp[TESTINDEX])
 
-print res
+    h1 = str(datetime.timedelta(seconds=timestampInSec[TESTINDEX][0]))+",000"
+    h2 = str(datetime.timedelta(seconds=timestampInSec[TESTINDEX][1]))+",000"
+
+    logger.info("%s", TESTINDEX)
+    logger.info("%s --> %s", h1, h2)
+    logger.info("%s", res)
+    #logger.debug("this should not appear in the srt file")
+
+logger.debug("%s", totalRes)
 
 sys.exit(1)
 ########################################################################################################################
@@ -182,3 +195,9 @@ wavChunk = wave.open(recreate, "w")
 wavChunk.setparams((nchannels, sampwidth, framerate, timestampNFrames[1], comptype, compname))
 wavChunk.writeframes(npFrames[168096:250176].tostring())
 wavChunk.close()
+
+
+
+
+#if __name__ == "main":
+    #main()
